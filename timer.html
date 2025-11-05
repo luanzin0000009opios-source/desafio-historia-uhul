@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timer e Desafio de História</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: white;
+      text-align: center;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: filter 0.5s, background 0.2s;
+    }
+
+    h1 { font-size: 2.2em; margin-bottom: 20px; animation: fadeIn 1s ease-in; }
+
+    button {
+      padding: 12px 25px;
+      font-size: 1.1em;
+      border: none;
+      border-radius: 8px;
+      background: #22c55e;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+      margin: 5px;
+      animation: fadeIn 1s ease-in;
+    }
+
+    button:hover { background: #16a34a; }
+    button:disabled { background: #4b5563; cursor: not-allowed; }
+    button.rage-btn { background: #ef4444; }
+    button.rage-btn:hover { background: #dc2626; }
+
+    #menu, #timer-screen, #config-roletas {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #timer { font-size: 4em; margin: 20px; transition: all 0.3s ease; }
+
+    .finalCountdown {
+      color: #f87171;
+      font-size: 7em;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+     @keyframes shake-rage {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    .shake-rage { animation: shake-rage 0.5s infinite; }
+    
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .flickering-screen {
+      animation: flicker 0.2s infinite;
+    }
+
+
+    .roletas {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+      animation: fadeIn 1s ease-in;
+    }
+
+    .roleta {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 20px;
+      width: 180px;
+      height: 120px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2em;
+      border: 2px solid #22c55e;
+      transition: transform 0.3s;
+    }
+
+    .roleta.girando { animation: girar 2s ease-in-out; }
+
+    @keyframes girar {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(360deg) scale(1.1); }
+      100% { transform: rotate(720deg) scale(1); }
+    }
+
+    video {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    #overlay-text {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 5em;
+      font-weight: bold;
+      text-shadow: 0 0 25px red;
+      z-index: 2;
+      animation: fadeIn 1s ease-in;
+    }
+
+    .gif {
+      position: absolute;
+      z-index: 5;
+      pointer-events: none;
+      animation: fadeInOut 4s forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: scale(0.5); }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: scale(0.5); }
+    }
+
+    #story-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 80%;
+      max-width: 700px;
+      margin-top: 20px;
+      animation: fadeIn 1s ease-in;
+      position: relative;
+    }
+
+    #story-container h3 { margin-bottom: 10px; }
+
+    #story-text {
+      width: 100%;
+      height: 200px;
+      border-radius: 8px;
+      border: none;
+      padding: 10px;
+      font-size: 1em;
+      resize: none;
+      font-family: inherit;
+    }
+
+    #buttons-final, #roguelike-controls {
+      display: none;
+      flex-direction: row;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      animation: fadeIn 1s ease-in;
+    }
+
+    #roguelike-hud, #rage-hud {
+        display: none;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.5);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: left;
+    }
+    #rage-hud { z-index: 20; }
+    #rage-hud #lives-container img { width: 30px; margin-right: 5px; }
+
+    #fury-bar-container {
+        width: 100%;
+        height: 20px;
+        background-color: #334155;
+        border-radius: 5px;
+        margin-top: 10px;
+        overflow: hidden;
+    }
+    #fury-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #facc15, #ef4444);
+        transition: width 0.1s linear;
+    }
+
+    #challenge-display {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(255,0,0,0.5);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: left;
+        max-width: 250px;
+    }
+    #typing-gif {
+        display: none;
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        width: 50px;
+        height: 50px;
+        z-index: 10;
+    }
+    #keyboard-explosion {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 50;
+        width: 80%;
+        max-width: 600px;
+    }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 99;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background: #1e293b;
+        padding: 30px;
+        border-radius: 12px;
+        border: 2px solid #22c55e;
+        max-width: 500px;
+        text-align: center;
+    }
+    .boon-curse-option {
+        border: 1px solid #4ade80;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .boon-curse-option:hover { background-color: #166534; }
+    .boon-curse-option h4 { margin: 0 0 5px 0; color: #a7f3d0; }
+    .boon-curse-option p { margin: 0; }
+    .curse-text { color: #fca5a5; }
+
+    #sticky-key-display {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239, 68, 68, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 1.5em;
+      z-index: 100;
+      display: none;
+      animation: fadeIn 0.5s;
+    }
+     #curse-notification {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(150, 50, 200, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 1.2em;
+      z-index: 100;
+      display: none;
+      animation: fadeIn 0.5s;
+    }
+    #red-light-green-light {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 6em;
+        font-weight: bold;
+        text-shadow: 0 0 15px white;
+        z-index: 101;
+        animation: fadeIn 0.5s;
+    }
+    .red-light { color: red; }
+    .green-light { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>🎬 Desafio do Timer Criativo</h1>
+
+  <div id="menu" style="display:flex;">
+    <button onclick="abrirTimer()">Timer Padrão</button>
+    <button onclick="abrirDesafio()">Timer Desafio de História</button>
+    <button onclick="abrirRoguelike()">🔥 Modo Roguelike</button>
+    <button class="rage-btn" onclick="abrirRageGame()">😡 Modo Rage</button>
+    <button onclick="abrirConfigRoletas()">⚙️ Personalizar Roletas</button>
+  </div>
+
+  <div id="timer-screen">
+    <div>
+      <label>Minutos:</label>
+      <input type="number" id="minutes" value="1" min="0">
+      <label>Segundos:</label>
+      <input type="number" id="seconds" value="0" min="0">
+    </div>
+    <div id="timer">01:00</div>
+    <button onclick="startTimer()" id="btn-iniciar">Iniciar</button>
+    <div class="roletas" id="roletas"></div>
+
+    <div id="story-container">
+      <h3>✍️ Escreva sua história aqui</h3>
+      <div id="fury-bar-container" style="display:none;">
+        <div id="fury-bar"></div>
+      </div>
+      <textarea id="story-text" placeholder="Digite sua história..."></textarea>
+      <img id="typing-gif" src="typing.gif" alt="Typing...">
+      <button onclick="finalizarHistoria()" id="btn-finalizar">Finalizar História</button>
+    </div>
+  </div>
+
+  <div id="buttons-final">
+    <button onclick="tentarDeNovo()">🔁 Tentar de Novo</button>
+  </div>
+  
+  <div id="roguelike-controls">
+      <button id="btn-proxima-rodada" onclick="iniciarRodada()">Próxima Rodada</button>
+      <button id="btn-finalizar-roguelike" onclick="finalizarJogoRoguelike()">Finalizar Jogo e Salvar</button>
+  </div>
+
+  <div id="roguelike-hud">
+      <div>Rodada: <span id="round-counter">1</span></div>
+      <div>Pontuação: <span id="score-counter">0</span></div>
+      <div id="word-ranking">
+          <h4>Top Palavras:</h4>
+          <ul id="word-ranking-list"></ul>
+      </div>
+  </div>
+   <div id="rage-hud">
+      <div>Vidas: <span id="lives-container"></span></div>
+      <div>Pontos: <span id="rage-score-counter">0</span></div>
+      <div id="rage-challenge-container" style="margin-top:10px;">
+          <h4>Desafio Atual:</h4>
+          <p id="rage-challenge-text"></p>
+      </div>
+  </div>
+  <div id="challenge-display" style="display:none;">
+      <h4>Desafio da Rodada:</h4>
+      <p id="challenge-text"></p>
+  </div>
+
+  <div id="config-roletas">
+    <h2>🎨 Personalizar Roletas</h2>
+    <p>Edite os itens de cada roleta (separados por vírgula):</p>
+    <textarea id="roleta1" rows="2" cols="40">Fantasia, Terror, Comédia, Drama, Ficção Científica</textarea><br>
+    <textarea id="roleta2" rows="2" cols="40">Dragão, Alienígena, Bruxa, Detetive, Robô</textarea><br>
+    <textarea id="roleta3" rows="2" cols="40">Espada mágica, Relógio do tempo, Poção misteriosa, Computador quebrado, Chave secreta</textarea><br>
+    <button onclick="salvarRoletas()">Salvar</button>
+    <button onclick="voltarMenu()">Voltar</button>
+  </div>
+  
+  <div id="modal-popup" class="modal-overlay">
+    <div id="modal-content-area" class="modal-content"></div>
+  </div>
+
+  <img id="keyboard-explosion" src="explosao.gif" alt="Explosion">
+  <div id="sticky-key-display">TECLA TRAVADA!</div>
+  <div id="curse-notification"></div>
+  <div id="red-light-green-light"></div>
+
+  <video id="video">
+    <source src="video.mp4" type="video/mp4">
+  </video>
+  <div id="overlay-text">CABO O TEMPO</div>
+
+  <audio id="beep" src="som dos 10.mp3" preload="auto"></audio>
+  <audio id="gifSound" src="somdosg.mp3" preload="auto"></audio>
+
+  <script>
+    let modo = "normal";
+    let timeLeft = 0;
+    let timerInterval;
+    let popupInterval;
+    const gifFolder = "gifs/";
+    const gifFiles = ["1.gif","2.gif","3.gif","4.gif","5.gif","6.gif","7.gif"];
+
+    // Roguelike & Rage variables
+    let round = 0;
+    let score = 0;
+    let wordCountMap = {};
+    let currentChallenge = null;
+    let typingTimeout;
+
+    // Rage Game variables
+    let lives = 3;
+    let furyLevel = 0;
+    let furyDecayInterval;
+    let furyStartDecayTimeout;
+    let activeCurses = {};
+    let redLightActive = false;
+    let ghostTypingInterval = null;
+
+    let roletaData = [
+      ["Fantasia", "Terror", "Comédia", "Drama", "Ficção Científica"],
+      ["Dragão", "Alienígena", "Bruxa", "Detetive", "Robô"],
+      ["Espada mágica", "Relógio do tempo", "Poção misteriosa", "Computador quebrado", "Chave secreta"]
+    ];
+
+    const challengeWords = ["cristal", "sombra", "eco", "labirinto", "horizonte", "memória", "segredo", "estrela", "silêncio"];
+    const alphabet = "abcdefghijklmnopqrstuvwxyz";
+
+    const storyTextEl = document.getElementById("story-text");
+    const typingGifEl = document.getElementById("typing-gif");
+    storyTextEl.addEventListener('input', () => {
+        typingGifEl.style.display = 'block';
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            typingGifEl.style.display = 'none';
+        }, 1000);
+        if (modo === 'rage') {
+            handleFuryBar();
+            if (activeCurses.vampireWords) handleVampireWords();
+        }
+    });
+
+    storyTextEl.addEventListener('keydown', (event) => {
+        if (redLightActive) {
+            loseLife();
+            furyLevel = Math.min(100, furyLevel + 25);
+            updateRageHUD();
+            document.body.style.background = 'red';
+            setTimeout(() => document.body.style.background = '', 100);
+            event.preventDefault();
+            return;
+        }
+        if (activeCurses.stickyKey && event.key.toLowerCase() === activeCurses.stickyKey) {
+            event.preventDefault();
+        }
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+             if (activeCurses.noDelete) {
+                event.preventDefault();
+            }
+            if (activeCurses.invertedBackspace) {
+                event.preventDefault();
+                const text = storyTextEl.value;
+                const pos = storyTextEl.selectionStart;
+                storyTextEl.value = text.slice(0, pos) + '█' + text.slice(pos);
+                storyTextEl.selectionStart = storyTextEl.selectionEnd = pos + 1;
+            }
+        }
+    });
+
+    function showScreen(screenId) {
+        ['menu', 'timer-screen', 'config-roletas'].forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById(screenId).style.display = 'flex';
+    }
+
+    function hideAllHUDs() {
+        ["roguelike-hud", "challenge-display", "roguelike-controls", "rage-hud", "fury-bar-container"].forEach(id => {
+            document.getElementById(id).style.display = "none";
+        });
+    }
+
+    function abrirTimer() {
+      modo = "normal";
+      showScreen("timer-screen");
+      document.getElementById("roletas").style.display = "none";
+      document.getElementById("story-container").style.display = "none";
+      document.getElementById("buttons-final").style.display = "none";
+      hideAllHUDs();
+    }
+
+    function abrirDesafio() {
+      modo = "historia";
+      showScreen("timer-screen");
+      document.getElementById("roletas").style.display = "flex";
+      document.getElementById("story-container").style.display = "flex";
+      document.getElementById("btn-finalizar").style.display = "block";
+      document.getElementById("buttons-final").style.display = "none";
+      hideAllHUDs();
+      prepararRoletas();
+    }
+
+    function abrirRoguelike() {
+        modo = "roguelike";
+        round = 0; score = 0; wordCountMap = {};
+        document.getElementById("story-text").value = "";
+        showScreen("timer-screen");
+        document.getElementById("roletas").style.display = "flex";
+        document.getElementById("story-container").style.display = "flex";
+        document.getElementById("btn-finalizar").style.display = "none";
+        hideAllHUDs();
+        document.getElementById("roguelike-hud").style.display = "block";
+        document.getElementById("challenge-display").style.display = "block";
+        document.getElementById("roguelike-controls").style.display = "flex";
+        document.getElementById("btn-proxima-rodada").style.display = "none";
+        document.getElementById("btn-finalizar-roguelike").style.display = "block";
+        document.getElementById("btn-iniciar").style.display = "block";
+        document.getElementById("story-text").readOnly = false;
+        updateRoguelikeHUD();
+        prepararRoletas();
+    }
+    
+    function abrirRageGame() {
+        modo = "rage";
+        lives = 3; furyLevel = 0; score = 0; activeCurses = {};
+        document.getElementById("story-text").value = "";
+        showScreen("timer-screen");
+        document.getElementById("roletas").style.display = "flex";
+        document.getElementById("story-container").style.display = "flex";
+        document.getElementById("btn-finalizar").style.display = "none";
+        hideAllHUDs();
+        document.getElementById("rage-hud").style.display = "block";
+        document.getElementById("fury-bar-container").style.display = "block";
+        document.getElementById("btn-iniciar").style.display = "block";
+        document.getElementById("story-text").readOnly = false;
+        updateRageHUD();
+        prepararRoletas();
+    }
+
+    function abrirConfigRoletas() { showScreen("config-roletas"); }
+    function voltarMenu() { showScreen("menu"); }
+
+    function salvarRoletas() {
+      roletaData[0] = document.getElementById("roleta1").value.split(",").map(i => i.trim());
+      roletaData[1] = document.getElementById("roleta2").value.split(",").map(i => i.trim());
+      roletaData[2] = document.getElementById("roleta3").value.split(",").map(i => i.trim());
+      alert("Roletas salvas com sucesso!");
+      voltarMenu();
+    }
+
+    function prepararRoletas() {
+      const cont = document.getElementById("roletas");
+      cont.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const div = document.createElement("div");
+        div.className = "roleta";
+        div.id = "roleta" + i;
+        div.textContent = "???";
+        cont.appendChild(div);
+      }
+    }
+
+    function girarRoletas() {
+      for (let i = 0; i < 3; i++) {
+        const div = document.getElementById("roleta" + i);
+        div.classList.add("girando");
+        const resultado = roletaData[i][Math.floor(Math.random() * roletaData[i].length)];
+        setTimeout(() => {
+          div.textContent = resultado;
+          div.classList.remove("girando");
+        }, 2000 + i * 500);
+      }
+    }
+
+    function startTimer() {
+      if (modo === 'roguelike') { iniciarRodada(); return; }
+      if (modo === 'rage') { iniciarRodadaRage(); return; }
+      
+      clearInterval(timerInterval); clearInterval(popupInterval);
+      const mins = parseInt(document.getElementById("minutes").value) || 0;
+      const secs = parseInt(document.getElementById("seconds").value) || 0;
+      timeLeft = mins * 60 + secs;
+      if (timeLeft <= 0) { alert("Defina um tempo maior que zero!"); return; }
+      document.getElementById("overlay-text").style.display = "none";
+      updateTimerDisplay();
+      if (modo === "historia") girarRoletas();
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 10 && timeLeft > 0) {
+          document.getElementById("timer").classList.add("finalCountdown");
+          playBeep();
+        }
+        if (Math.random() < 0.1 && timeLeft > 0) { showRandomGif(); }
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          if (modo !== 'roguelike' && modo !== 'rage') playVideo();
+          if (modo === "historia") salvarHistoria();
+          if (modo === 'roguelike') finalizarRodada();
+        }
+      }, 1000);
+    }
+    
+    function pauseTimer() { clearInterval(timerInterval); clearInterval(popupInterval); }
+    function resumeTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 10 && timeLeft > 0) { document.getElementById("timer").classList.add("finalCountdown"); playBeep(); }
+            if (timeLeft <= 0) {
+              if (modo === 'rage') gameOverRage("O tempo acabou!");
+              else clearInterval(timerInterval);
+            }
+        }, 1000);
+        if (modo === 'rage') {
+            popupInterval = setInterval(triggerRandomPopup, 6000); 
+        }
+    }
+
+    function updateTimerDisplay() {
+      const timerEl = document.getElementById("timer");
+      const mins = Math.floor(timeLeft / 60);
+      const secs = timeLeft % 60;
+      timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      if (timeLeft > 10) timerEl.classList.remove("finalCountdown");
+    }
+
+    // --- RAGE GAME FUNCTIONS ---
+    function iniciarRodadaRage() {
+        document.getElementById("btn-iniciar").style.display = "none";
+        currentChallenge = gerarDesafio();
+        document.getElementById("rage-challenge-text").textContent = currentChallenge.description;
+        updateRageHUD();
+        girarRoletas();
+        clearInterval(timerInterval);
+        clearInterval(popupInterval);
+        const mins = parseInt(document.getElementById("minutes").value) || 0;
+        const secs = parseInt(document.getElementById("seconds").value) || 0;
+        timeLeft = mins * 60 + secs;
+        updateTimerDisplay();
+        resumeTimer();
+    }
+
+    function updateRageHUD() {
+        document.getElementById("rage-score-counter").textContent = score;
+        const livesContainer = document.getElementById("lives-container");
+        livesContainer.innerHTML = "";
+        for(let i=0; i<lives; i++) {
+            const heart = document.createElement('img');
+            heart.src = 'coração.png';
+            livesContainer.appendChild(heart);
+        }
+        document.getElementById("fury-bar").style.width = furyLevel + '%';
+    }
+
+    function handleFuryBar() {
+        clearInterval(furyDecayInterval); clearTimeout(furyStartDecayTimeout);
+        furyLevel += activeCurses.fastFury ? 5.0 : 2.5;
+        if (furyLevel >= 100) { furyLevel = 100; explodeKeyboard(); }
+        updateRageHUD();
+        if (furyLevel > 80) document.body.classList.add('shake-rage');
+        else document.body.classList.remove('shake-rage');
+        furyStartDecayTimeout = setTimeout(() => {
+            furyDecayInterval = setInterval(() => {
+                furyLevel -= 1.5;
+                if (furyLevel <= 0) { furyLevel = 0; clearInterval(furyDecayInterval); }
+                updateRageHUD();
+                if (furyLevel <= 80) document.body.classList.remove('shake-rage');
+            }, 100);
+        }, 800);
+    }
+
+    function explodeKeyboard() {
+        if (activeCurses.reinforcedKeyboard) {
+            activeCurses.reinforcedKeyboard = false;
+            furyLevel = 0;
+            alert("Ufa! Seu teclado reforçado aguentou a explosão!");
+            return;
+        }
+        pauseTimer();
+        document.getElementById("keyboard-explosion").style.display = "block";
+        setTimeout(() => {
+            document.getElementById("keyboard-explosion").style.display = "none";
+            lives = 0; updateRageHUD();
+            gameOverRage("O teclado explodiu de fúria!");
+        }, 2000);
+    }
+    
+    function loseLife(amount = 1) {
+        lives -= amount;
+        updateRageHUD();
+        if (lives <= 0) gameOverRage("Você ficou sem vidas!");
+    }
+    
+    function gainLife() { if (lives < 5) lives++; updateRageHUD(); }
+
+    function triggerRandomPopup() {
+        if (Math.random() < 0.55) return;
+        pauseTimer();
+        const popupType = Math.random();
+        if (popupType < 0.25) triggerRedLightGreenLight();
+        else if (popupType < 0.5) showHorseRacePopup();
+        else if (popupType < 0.75) showButtonPopup();
+        else showBoonCursePopup();
+    }
+    
+    function triggerRedLightGreenLight() {
+        const rlglDisplay = document.getElementById('red-light-green-light');
+        const redDuration = 2000 + Math.random() * 2000; // 2 to 4 seconds
+        
+        rlglDisplay.textContent = 'PARE!';
+        rlglDisplay.className = 'red-light';
+        rlglDisplay.style.display = 'block';
+        redLightActive = true;
+
+        setTimeout(() => {
+            rlglDisplay.textContent = 'VAI!';
+            rlglDisplay.className = 'green-light';
+            redLightActive = false;
+            setTimeout(() => {
+                rlglDisplay.style.display = 'none';
+                if (modo === 'rage' && lives > 0) resumeTimer();
+            }, 1000);
+        }, redDuration);
+    }
+
+    function showBoonCursePopup() {
+        const modalContent = document.getElementById('modal-content-area');
+        const options = getRandomBoonCurseOptions(2);
+        let optionsHTML = `<h3>Uma Escolha Cruel...</h3>`;
+        options.forEach((opt, index) => {
+            optionsHTML += `
+                <div class="boon-curse-option" id="boon-choice-${index}">
+                    <h4>${opt.title}</h4>
+                    <p>${opt.boon.description}</p>
+                    <p class="curse-text">${opt.curse.description}</p>
+                </div>
+            `;
+        });
+        modalContent.innerHTML = optionsHTML;
+        document.getElementById('modal-popup').style.display = 'flex';
+
+        options.forEach((opt, index) => {
+            document.getElementById(`boon-choice-${index}`).onclick = () => {
+                opt.boon.apply();
+                opt.curse.apply();
+                closeModal();
+            };
+        });
+    }
+    
+    const boonsAndCurses = [
+        { type: 'boon', title: 'Mente Calma', description: 'A fúria se esvai por 15 segundos.', apply: () => { furyLevel=0; updateRageHUD();} },
+        { type: 'boon', title: 'Tempo Extra', description: '+15 segundos no relógio.', apply: () => { timeLeft += 15; updateTimerDisplay(); } },
+        { type: 'boon', title: 'Vida Extra', description: 'Ganha uma vida (max 5).', apply: () => gainLife() },
+        { type: 'boon', title: 'Teclado Reforçado', description: 'Seu teclado sobrevive à próxima explosão de fúria.', apply: () => { activeCurses.reinforcedKeyboard = true; } },
+        { type: 'boon', title: 'Purificação', description: 'Remove uma maldição aleatória ativa.', apply: () => removeRandomCurse() },
+        { type: 'curse', title: 'Miopia Súbita', description: 'A tela fica embaçada por 10 segundos.', apply: () => { document.body.style.filter = 'blur(2px)'; setTimeout(()=>document.body.style.filter='', 10000); } },
+        { type: 'curse', title: 'Dedos Grudentos', description: 'Uma tecla aleatória fica travada por 15 segundos.', apply: () => activateStickyKeys(15) },
+        { type: 'curse', title: 'Pavio Curto', description: 'A fúria acumula 2x mais rápido por 20 segundos.', apply: () => { activeCurses.fastFury = true; setTimeout(()=>activeCurses.fastFury=false, 20000); } },
+        { type: 'curse', title: 'Dreno de Tempo', description: 'Perca 10 segundos imediatamente.', apply: () => { timeLeft -= 10; updateTimerDisplay(); } },
+        { type: 'curse', title: 'Sem Arrependimentos', description: 'Você não pode apagar o que escreveu por 20 segundos.', apply: () => activateNoDelete(20) },
+        { type: 'curse', title: 'Palavras Vampiras', description: 'Cada 5 palavras drenam 1s do tempo por 30s.', apply: () => activateVampireWords(30) },
+        { type: 'curse', title: 'Tela Piscando', description: 'Sua visão falha por 12 segundos.', apply: () => activateFlickeringScreen(12) },
+        { type: 'curse', title: 'Backspace Invertido', description: 'Backspace adiciona caracteres em vez de apagar por 15 segundos.', apply: () => activateInvertedBackspace(15) },
+        { type: 'curse', title: 'Digitação Fantasma', description: 'Caracteres aleatórios aparecerão no seu texto por 20 segundos.', apply: () => activateGhostTyping(20) }
+    ];
+
+    function getRandomBoonCurseOptions(count) {
+        const availableBoons = [...boonsAndCurses.filter(item => item.type === 'boon')];
+        const availableCurses = [...boonsAndCurses.filter(item => item.type === 'curse')];
+        let selected = [];
+        for(let i=0; i<count; i++) {
+            if(availableBoons.length === 0 || availableCurses.length === 0) break;
+            const randomBoon = availableBoons.splice(Math.floor(Math.random() * availableBoons.length), 1)[0];
+            const randomCurse = availableCurses.splice(Math.floor(Math.random() * availableCurses.length), 1)[0];
+            selected.push({ title: `Opção ${i+1}`, boon: randomBoon, curse: randomCurse });
+        }
+        return selected;
+    }
+    
+    function showCurseNotification(text) {
+        const display = document.getElementById('curse-notification');
+        display.textContent = text;
+        display.style.display = 'block';
+        setTimeout(() => { display.style.display = 'none'; }, 2500);
+    }
+    
+    function activateFlickeringScreen(duration) {
+        showCurseNotification("TELA PISCANDO!");
+        document.body.classList.add('flickering-screen');
+        setTimeout(() => {
+            document.body.classList.remove('flickering-screen');
+        }, duration * 1000);
+    }
+
+    function activateInvertedBackspace(duration) {
+        activeCurses.invertedBackspace = true;
+        showCurseNotification("BACKSPACE INVERTIDO!");
+        setTimeout(() => {
+            activeCurses.invertedBackspace = false;
+        }, duration * 1000);
+    }
+
+    function activateGhostTyping(duration) {
+        activeCurses.ghostTyping = true;
+        showCurseNotification("DIGITAÇÃO FANTASMA!");
+        ghostTypingInterval = setInterval(() => {
+            if(activeCurses.ghostTyping && Math.random() < 0.3) {
+               const glitches = [' H@CK3D ', ' ... ', ' 3RR0R ', ' !@#$ ', ' zzz '];
+               const glitch = glitches[Math.floor(Math.random() * glitches.length)];
+               const pos = storyTextEl.selectionStart;
+               const text = storyTextEl.value;
+               storyTextEl.value = text.slice(0, pos) + glitch + text.slice(pos);
+               storyTextEl.selectionStart = storyTextEl.selectionEnd = pos + glitch.length;
+            }
+        }, 1500);
+
+        setTimeout(() => {
+           activeCurses.ghostTyping = false;
+           clearInterval(ghostTypingInterval);
+           ghostTypingInterval = null;
+        }, duration * 1000);
+    }
+
+
+    function activateStickyKeys(duration) {
+        const letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+        activeCurses.stickyKey = letter;
+        const display = document.getElementById('sticky-key-display');
+        display.textContent = `TECLA '${letter.toUpperCase()}' TRAVADA!`;
+        display.style.display = 'block';
+        setTimeout(() => {
+            activeCurses.stickyKey = null;
+            display.style.display = 'none';
+        }, duration * 1000);
+    }
+    
+    function activateNoDelete(duration) {
+        activeCurses.noDelete = true;
+        showCurseNotification("BACKSPACE E DELETE DESATIVADOS!");
+        setTimeout(() => {
+            activeCurses.noDelete = false;
+        }, duration * 1000);
+    }
+    
+    function activateVampireWords(duration) {
+        const startWordCount = storyTextEl.value.trim().split(/\s+/).filter(Boolean).length;
+        activeCurses.vampireWords = {
+            startWordCount: startWordCount,
+            drainedCount: 0
+        };
+        showCurseNotification("PALAVRAS VAMPIRAS ATIVAS!");
+        setTimeout(() => {
+            activeCurses.vampireWords = null;
+        }, duration * 1000);
+    }
+    
+    function handleVampireWords() {
+        const currentWords = storyTextEl.value.trim().split(/\s+/).filter(Boolean).length;
+        const wordsTypedSinceCurse = currentWords - activeCurses.vampireWords.startWordCount;
+        const drainsToDo = Math.floor(wordsTypedSinceCurse / 5);
+        
+        if (drainsToDo > activeCurses.vampireWords.drainedCount) {
+            timeLeft = Math.max(0, timeLeft - (drainsToDo - activeCurses.vampireWords.drainedCount));
+            updateTimerDisplay();
+            activeCurses.vampireWords.drainedCount = drainsToDo;
+        }
+    }
+    
+    function removeRandomCurse() {
+        const activeCurseKeys = Object.keys(activeCurses).filter(key => activeCurses[key]);
+        if (activeCurseKeys.length > 0) {
+            const keyToRemove = activeCurseKeys[Math.floor(Math.random() * activeCurseKeys.length)];
+            activeCurses[keyToRemove] = null;
+            if (keyToRemove === 'stickyKey') document.getElementById('sticky-key-display').style.display = 'none';
+            if (keyToRemove === 'ghostTyping') {
+                clearInterval(ghostTypingInterval);
+                ghostTypingInterval = null;
+            }
+            alert(`A maldição "${keyToRemove}" foi removida!`);
+        } else {
+            alert("Sorte sua, nenhuma maldição estava ativa!");
+        }
+    }
+
+
+    function closeModal() {
+        document.getElementById('modal-popup').style.display = 'none';
+        if (lives > 0) resumeTimer();
+    }
+
+    function gameOverRage(reason) {
+        pauseTimer();
+        clearInterval(ghostTypingInterval);
+        ghostTypingInterval = null;
+        document.body.classList.remove('shake-rage');
+        document.body.classList.remove('flickering-screen');
+        const challengeResult = validarDesafio();
+        let finalMessage = `Fim de Jogo! ${reason}\n`;
+        if (challengeResult.success) {
+            score += 250;
+            finalMessage += `Desafio "${currentChallenge.value}" cumprido! +250 pontos.\n`;
+        } else {
+            finalMessage += `Desafio falhou. ${challengeResult.reason}\n`;
+        }
+        finalMessage += `Pontuação Final: ${score}`;
+
+        document.getElementById("story-text").readOnly = true;
+        alert(finalMessage);
+        salvarHistoria();
+        setTimeout(tentarDeNovo, 2000);
+    }
+
+    // --- SHARED/UNCHANGED FUNCTIONS (condensed for clarity) ---
+    // Note: The logic inside these functions is copied from the original prompt for completeness.
+    const unchangedFunctions = {
+        showHorseRacePopup: function() {
+            const modalContent = document.getElementById('modal-content-area');
+            modalContent.innerHTML = `<h3>Corrida de Cavalos!</h3><p>Aposte 1 vida. Se vencer, ganha 2 vidas!</p><button id="cavalo1">Apostar no "Pé de Pano"</button><button id="cavalo2">Apostar no "Relâmpago Marquinhos"</button>`;
+            document.getElementById('modal-popup').style.display = 'flex';
+            document.getElementById('cavalo1').onclick = () => this.resolveRace(1); document.getElementById('cavalo2').onclick = () => this.resolveRace(2);
+        },
+        resolveRace: function(chosenHorse) {
+            loseLife(); const winningHorse = Math.floor(Math.random() * 2) + 1;
+            if (chosenHorse === winningHorse) { alert("Seu cavalo venceu!"); gainLife(); gainLife(); } else { alert("Seu cavalo perdeu!"); }
+            closeModal();
+        },
+        showButtonPopup: function() {
+            const modalContent = document.getElementById('modal-content-area');
+            modalContent.innerHTML = `<h3>Um Botão Misterioso!</h3><p>Ele pode te dar uma vantagem... e uma desvantagem.</p><button id="pressBtn" class="rage-btn">Apertar</button><button id="dontPressBtn">Ignorar</button>`;
+            document.getElementById('modal-popup').style.display = 'flex';
+            document.getElementById('pressBtn').onclick = this.resolveButtonPress; document.getElementById('dontPressBtn').onclick = closeModal;
+        },
+        resolveButtonPress: function() {
+            const advantages = [ () => { timeLeft += 10; alert("+10 segundos!"); }, () => { score += 100; alert("+100 pontos!"); updateRageHUD(); }, () => { furyLevel = Math.max(0, furyLevel - 50); alert("Fúria apaziguada!"); updateRageHUD(); } ];
+            const disadvantages = [ () => { timeLeft = Math.max(0, timeLeft - 15); alert("-15 segundos!"); }, () => { loseLife(); alert("Você perdeu uma vida!"); }, () => { furyLevel = Math.min(100, furyLevel + 50); alert("Fúria aumentada!"); updateRageHUD(); } ];
+            advantages[Math.floor(Math.random() * advantages.length)](); disadvantages[Math.floor(Math.random() * disadvantages.length)]();
+            closeModal();
+        },
+        gerarDesafio: () => {
+            const challengeType = Math.random() > 0.5 ? 'useWord' : 'avoidLetter';
+            if (challengeType === 'useWord') {
+                const word = challengeWords[Math.floor(Math.random() * challengeWords.length)];
+                return { type: 'useWord', value: word, description: `Use a palavra "${word}".` };
+            } else {
+                const letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+                return { type: 'avoidLetter', value: letter, description: `Não use a letra "${letter.toUpperCase()}".` };
+            }
+        },
+        validarDesafio: () => {
+            const story = document.getElementById("story-text").value.toLowerCase();
+            if(!currentChallenge) return { success: true, points: 0 };
+            if (currentChallenge.type === 'useWord') {
+                return story.includes(currentChallenge.value) ? { success: true, points: 150 } : { success: false, reason: `Você não usou a palavra "${currentChallenge.value}".`, points: 0 };
+            }
+            if (currentChallenge.type === 'avoidLetter') {
+                return story.includes(currentChallenge.value) ? { success: false, reason: `Você usou a letra proibida "${currentChallenge.value}".`, points: 0 } : { success: true, points: 100 };
+            }
+            return { success: true, points: 0 };
+        },
+        calcularPontuacao: function(challengeResult) {
+            score += challengeResult.points;
+            const wordsWritten = document.getElementById("story-text").value.trim().split(/\s+/).filter(Boolean).length;
+            score += wordsWritten * 5;
+        },
+        iniciarRodada: function() {
+            round++; currentChallenge = this.gerarDesafio();
+            document.getElementById("challenge-text").textContent = currentChallenge.description;
+            document.getElementById("btn-iniciar").style.display = "none";
+            document.getElementById("btn-proxima-rodada").style.display = "none";
+            document.getElementById("story-text").readOnly = false;
+            updateRoguelikeHUD(); girarRoletas();
+            clearInterval(timerInterval);
+            timeLeft = (parseInt(document.getElementById("minutes").value) || 0) * 60 + (parseInt(document.getElementById("seconds").value) || 0);
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--; updateTimerDisplay();
+                if (timeLeft <= 10 && timeLeft > 0) { document.getElementById("timer").classList.add("finalCountdown"); playBeep(); }
+                if (timeLeft <= 0) { clearInterval(timerInterval); this.finalizarRodada(); }
+            }, 1000);
+        },
+        finalizarRodada: function() {
+            document.getElementById("story-text").readOnly = true;
+            const challengeResult = this.validarDesafio();
+            this.calcularPontuacao(challengeResult); this.atualizarRankingPalavras(); updateRoguelikeHUD();
+            document.getElementById("btn-proxima-rodada").style.display = "block";
+            alert(challengeResult.success ? `Rodada ${round} completa! Desafio concluído! +${challengeResult.points} pontos.` : `Rodada ${round} completa! Desafio falhou! ${challengeResult.reason}.`);
+        },
+        atualizarRankingPalavras: () => {
+            const words = document.getElementById("story-text").value.toLowerCase().replace(/[.,!?;:()]/g, "").trim().split(/\s+/).filter(Boolean);
+            words.forEach(word => { if (word.length > 2) wordCountMap[word] = (wordCountMap[word] || 0) + 1; });
+            const sortedWords = Object.entries(wordCountMap).sort((a, b) => b[1] - a[1]);
+            const listEl = document.getElementById("word-ranking-list");
+            listEl.innerHTML = "";
+            sortedWords.slice(0, 5).forEach(item => { const li = document.createElement("li"); li.textContent = `${item[0]}: ${item[1]}`; listEl.appendChild(li); });
+        },
+        updateRoguelikeHUD: () => { document.getElementById("round-counter").textContent = round; document.getElementById("score-counter").textContent = score; },
+        finalizarJogoRoguelike: () => { clearInterval(timerInterval); alert(`Jogo finalizado! Pontuação final: ${score}.`); salvarHistoria(); tentarDeNovo(); },
+        playBeep: () => { const beep = document.getElementById("beep"); beep.currentTime = 0; beep.play(); },
+        playGifSound: () => { const gifSound = document.getElementById("gifSound"); gifSound.currentTime = 0; gifSound.play(); },
+        showRandomGif: function() {
+            const gif = document.createElement("img"); gif.src = gifFolder + gifFiles[Math.floor(Math.random() * gifFiles.length)];
+            gif.className = "gif"; const size = 100 + Math.random() * 150;
+            gif.style.width = size + "px"; gif.style.top = Math.random() * (window.innerHeight - size) + "px"; gif.style.left = Math.random() * (window.innerWidth - size) + "px";
+            document.body.appendChild(gif); this.playGifSound(); setTimeout(() => gif.remove(), 4000);
+        },
+        playVideo: () => {
+            if (modo === 'roguelike' || modo === 'rage') return;
+            const video = document.getElementById("video"); const overlay = document.getElementById("overlay-text");
+            document.getElementById("timer").classList.remove("finalCountdown");
+            video.style.display = "block"; overlay.style.display = "block"; video.play();
+            if (modo === "historia") document.getElementById("buttons-final").style.display = "flex";
+        },
+        salvarHistoria: () => {
+            const texto = document.getElementById("story-text").value.trim(); if (!texto) return;
+            const agora = new Date(); const nomeArquivo = `historia_${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}_${String(agora.getHours()).padStart(2,'0')}-${String(agora.getMinutes()).padStart(2,'0')}.txt`;
+            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([texto], { type: 'text/plain' }));
+            link.download = nomeArquivo; link.click(); URL.revokeObjectURL(link.href);
+        },
+        finalizarHistoria: function() { clearInterval(timerInterval); this.salvarHistoria(); this.playVideo(); },
+        tentarDeNovo: () => { location.reload(); }
+    };
+    Object.assign(window, unchangedFunctions);
+  </script>
+</body>
+</html>
